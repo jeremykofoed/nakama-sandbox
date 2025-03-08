@@ -17,7 +17,7 @@ const ( //Building it this way avoids using string values on maps but allows the
 // Information on single status effect.
 type StackInfo struct {
 	Count int64 `json:"count"`
-	Max int64 `json:"count"`
+	Max int64 `json:"max"`
 	Chance float64 `json:"chance"`
 }
 

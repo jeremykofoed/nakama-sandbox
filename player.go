@@ -79,7 +79,7 @@ func LoadPlayerData(nk runtime.NakamaModule, userID string) (*Player, error) {
 		return nil, err
 	}
 	if len(rObj) == 0 {
-		return nil, fmt.Errorf("player not found")
+		return nil, fmt.Errorf("player not found") //@JWK TODO: Call NewPlayer() and SavePlayerData().
 	}
 	var player Player
 	if err = json.Unmarshal([]byte(rObj[0].Value), &player); err != nil {

@@ -9,7 +9,6 @@ import (
 )
 
 type BuildEnvironment int32
-
 // Build / Deployed Environment
 const (
 	Local BuildEnvironment = iota
@@ -17,6 +16,8 @@ const (
 	QA
 	Production
 )
+
+var configDataStorageCollection = "configData"
 
 // See https://heroiclabs.com/docs/nakama/server-framework/go-runtime/ for more details on the Go Runtime and how to use it.
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error {
@@ -52,10 +53,16 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	logger.Debug("Loaded StatusEffectsRegistry: %+v", StatusEffectsRegistry)
 	InitAttackRegistry()
 	logger.Debug("Loaded AttackRegistry: %+v", AttackRegistry)
+	err := InitEnemyRegistry(ctx, logger, nk)
+	if err != nil {
+		logger.Error("Error processing InitEnemyRegistry(): %v", err)
+	}
+	logger.Debug("Loaded EnemyRegistry: %+v", EnemyRegistry)
 
 	//Before/After hooks if any.
 
 	//Custom RPCs if any.
+	//@JWK TODO: Implement RPC to load game.  This will allow either enemy selection or finish a previous battle.
 	//@JWK TODO: Implement RPC to do attacks {player id, target id, attack info}.
 	//@JWK TODO: Successful hits must return updated health values.
 	//@JWK TODO: Implement RPC to get player health, status effects, and the number of enemy TYPES the player has killed.

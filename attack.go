@@ -12,6 +12,8 @@ const ( //Building it this way avoids using string values on maps but allows the
 	Kick AttackType = "kick"
 	UpperCut AttackType = "uppercut"
 	HeadButt AttackType = "headbutt"
+	Bite AttackType = "bite"
+	Scratch AttackType = "scratch"
 )
 
 // Information on single attack action.
@@ -55,7 +57,7 @@ func InitAttackRegistry() {
 	AttackRegistry.Attacks[Punch] = AttackInfo{
 		Type: Punch,
 		Damage: 4,
-		BaseHitChance: 0.90,
+		BaseHitChance: 0.9,
 		ApplicableStatusEffect: []StatusEffectFromAttacks{
 			{
 				Type: Dazed,
@@ -96,6 +98,28 @@ func InitAttackRegistry() {
 			{
 				Type: Bleed,
 				Chance: 0.7,
+			},
+		},
+	}
+	AttackRegistry.Attacks[Bite] = AttackInfo{
+		Type: Bite,
+		Damage: 5,
+		BaseHitChance: 0.9,
+		ApplicableStatusEffect: []StatusEffectFromAttacks{
+			{
+				Type: Bleed,
+				Chance: 0.8,
+			},
+		},
+	}
+	AttackRegistry.Attacks[Scratch] = AttackInfo{
+		Type: Scratch,
+		Damage: 4,
+		BaseHitChance: 0.95,
+		ApplicableStatusEffect: []StatusEffectFromAttacks{
+			{
+				Type: Poison,
+				Chance: 0.3,
 			},
 		},
 	}
