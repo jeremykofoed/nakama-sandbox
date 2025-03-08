@@ -1,0 +1,5 @@
+logger:
+  level: "DEBUG"
+runtime:
+  env:
+    - ConfiguredEnvironement=local
