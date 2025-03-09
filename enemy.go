@@ -18,20 +18,14 @@ const ( //Building it this way avoids using string values on maps but allows the
 	Beast EnemyType = "beast"
 )
 
-// Information on rewards.
-type RewardInfo struct {
-	Type int64 `json:"type"`
-	Amount int64 `json:"amount"`
-}
-
 // Enemy data structure.
 type Enemy struct {
 	Type EnemyType `json:"type"`
-	ID string `json:"id"` //Unique ID assigned at time of battle game play.
-	Health int `json:"Health"`
+	ID string `json:"id"` //Unique ID assigned at time of enemy selection.
+	Health int `json:"health"`
 	AttackModifier float64 `json:"attack_modifier"` //This is used to adjust attack type damage values.
 	StatusEffects []StatusEffect `json:"status_effects"` //Used to store player state modifiers.
-	Rewards []RewardInfo `json:"rewards"`
+	Rewards []RewardInfo `json:"rewards"` //Rewards assigned at time of enemy selection.
 }
 
 // Registry to hold all of the definitions.  Using a mutex here since the data could be live-ops driven meaning it could change after nakama init.
@@ -101,10 +95,10 @@ func InitEnemyRegistry(ctx context.Context, logger runtime.Logger, nk runtime.Na
 
 // This function will save the Enemy Registry to storage.
 func SaveEnemyRegistry(nk runtime.NakamaModule) error {
-	EnemyRegistry.RLock() //Read lock so we can write exclusively.
+	EnemyRegistry.RLock() //Read lock.
 	//Json-ify the enemy registry in prepartion for storage.
 	data, err := json.Marshal(EnemyRegistry.Enemies)
-	EnemyRegistry.RUnlock() //Don't forget to release the mutex lock.
+	EnemyRegistry.RUnlock() //Don't forget to release the lock.
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
+	"github.com/google/uuid"
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
@@ -17,7 +17,7 @@ const (
 	Production
 )
 
-var configDataStorageCollection = "configData"
+var configDataStorageCollection = "config"
 
 // See https://heroiclabs.com/docs/nakama/server-framework/go-runtime/ for more details on the Go Runtime and how to use it.
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error {
@@ -63,6 +63,10 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 
 	//Custom RPCs if any.
 	//@JWK TODO: Implement RPC to load game.  This will allow either enemy selection or finish a previous battle.
+	if err := initializer.RegisterRpc("load_game", LoadGameRPC()); err != nil {
+		return err
+	}
+
 	//@JWK TODO: Implement RPC to do attacks {player id, target id, attack info}.
 	//@JWK TODO: Successful hits must return updated health values.
 	//@JWK TODO: Implement RPC to get player health, status effects, and the number of enemy TYPES the player has killed.
@@ -80,4 +84,9 @@ func UtilGetUserId(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Could not extract the user id from the runtime context.")
 	}
 	return userId, nil
+}
+
+func UtilMakeUUID() string {
+	id := uuid.New()
+	return id.String()
 }
