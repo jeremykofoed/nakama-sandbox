@@ -62,14 +62,18 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	//Before/After hooks if any.
 
 	//Custom RPCs if any.
-	//@JWK TODO: Implement RPC to load game.  This will allow either enemy selection or finish a previous battle.
+	//RPC to load game.  This will allow either enemy selection and enter a battle or finish an un-finished battle.
 	if err := initializer.RegisterRpc("load_game", LoadGameRPC()); err != nil {
 		return err
 	}
 
 	//@JWK TODO: Implement RPC to do attacks {player id, target id, attack info}.
 	//@JWK TODO: Successful hits must return updated health values.
-	//@JWK TODO: Implement RPC to get player health, status effects, and the number of enemy TYPES the player has killed.
+
+	//RPC to get player health, status effects, and the number of enemy TYPES the player has killed.
+	if err := initializer.RegisterRpc("player_info", PlayerInfoRPC()); err != nil {
+		return err
+	}
 	//@JWK TODO: Bonus, implement unit tests.
 
 	return nil

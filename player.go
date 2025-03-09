@@ -21,7 +21,7 @@ type Player struct {
 	Currencies []Currency `json:"currency"` //Nakama supports a wallet that can be implemented at a later time.
 	StatusEffects []StatusEffect `json:"status_effects"` //Used to store player state modifiers.
 	BattleState BattleState `json:"battle_state"` //Used to store the battle game state.
-	BattleStats map[EnemyType]int `json:"battle_stats"` //Used to store the number of enemies vanquished.
+	BattleStats map[EnemyType]int `json:"battle_stats"` //Used to store the number of enemies vanquished.  Expound upon this to include other stats.
 	Attributes map[string]interface{} `json:"attributes"` //Key-Value map for addional data as needed.
 	CreatedAt int64 `json:"created_at"`
 	UpdatedAt int64 `json:"updated_at"`

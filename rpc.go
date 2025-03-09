@@ -30,7 +30,7 @@ func LoadGameRPC() func(ctx context.Context, logger runtime.Logger, db *sql.DB, 
 			logger.Error("Unable to get battle state: %v", err)
 			return "", err
 		}
-		
+
 		//@JWK TODO: Remove me when done
 		logger.WithFields(map[string]interface{}{
 			"player": player,
@@ -77,4 +77,46 @@ func RPCAttack(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtim
 	}
 	logger.Info("Response: %+v", response)
 	return nil
+}
+
+func PlayerInfoRPC() func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+		//Get the user id from the runtime.
+		userID, err := UtilGetUserId(ctx)
+		if err != nil {
+			logger.Error("Unable to extract user id from context due to error: %v", err)
+			return "", err
+		}
+
+		//Get Player object.
+		player, err := LoadPlayerData(ctx, logger, nk, userID)
+		if err != nil {
+			logger.Error("Unable to load player data: %v", err)
+			return "", err
+		}
+
+		//Limited scope response struct
+		type ClientResponse struct {
+			PlayerHealth int `json:"player_health"`
+			StatusEffects []StatusEffect `json:"status_effects"`
+			BattleStats map[EnemyType]int `json:"battle_stats"`
+		}
+		response := ClientResponse{
+			PlayerHealth: player.Health,
+			StatusEffects: player.StatusEffects,
+			BattleStats: player.BattleStats,
+		}
+
+		//Return info to the client.
+		jRes, err := json.Marshal(response)
+		if err != nil {
+			//More robust logging to get more info.
+			logger.WithFields(map[string]interface{}{
+				"response": response,
+			}).Error("Unable to marshal client response: %v.", err)
+			return "", err
+		}
+
+		return string(jRes), nil
+	}
 }
