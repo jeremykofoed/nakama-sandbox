@@ -126,7 +126,7 @@ func InitAttackRegistry() {
 }
 
 //
-func (p *Player) DoAttack(target string, attack AttackInfo) {
+func (p *Player) DoAttack(target Enemy, attack AttackType) {
 	//@JWK TODO: Implement target.
 	//@JWK TODO: RNG for success.
 	//@JWK TODO: Store battle data updates keeping track of health, status', etc.

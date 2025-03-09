@@ -36,7 +36,7 @@ func (p *Player) CreateBattle(ctx context.Context, logger runtime.Logger, nk run
 		return fmt.Errorf("unable to get an enemy, scope out of bounds possibly.")
 	}
 	enemy.ID = UtilMakeUUID()
-	enemy.Rewards = GetRewards()
+	enemy.Rewards = CreateRewards()
 	var enemies []Enemy
 	enemies = append(enemies, enemy)
 	p.BattleState.Enemies = enemies
@@ -85,8 +85,8 @@ func GetEnemy() (Enemy, bool) {
 	return enemy, exists
 }
 
-// 
-func GetRewards() []RewardInfo {
+// This function creates reward information
+func CreateRewards() []RewardInfo {
 	var rewards []RewardInfo
 	//Experience
 	reward := RewardInfo{

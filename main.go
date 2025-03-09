@@ -69,6 +69,9 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 
 	//@JWK TODO: Implement RPC to do attacks {player id, target id, attack info}.
 	//@JWK TODO: Successful hits must return updated health values.
+	if err := initializer.RegisterRpc("attack_target", AttackTargetRPC()); err != nil {
+		return err
+	}
 
 	//RPC to get player health, status effects, and the number of enemy TYPES the player has killed.
 	if err := initializer.RegisterRpc("player_info", PlayerInfoRPC()); err != nil {
@@ -90,6 +93,7 @@ func UtilGetUserId(ctx context.Context) (string, error) {
 	return userId, nil
 }
 
+// Generate a UUID.
 func UtilMakeUUID() string {
 	id := uuid.New()
 	return id.String()

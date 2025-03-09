@@ -50,6 +50,7 @@ func NewPlayer(userID, displayerName string) *Player {
 
 // This function saves the player data to nakama storage.
 // See https://heroiclabs.com/docs/nakama/concepts/storage/permissions/ for information on public read/write permissions or other storage information.
+// @JWK TODO: Implement saving only if there is dirty data.
 func (p *Player) SavePlayerData(nk runtime.NakamaModule) error {
 	p.UpdatedAt = time.Now().Unix()
 	//Json-ify the player struct in prepartion for storage.
@@ -68,6 +69,7 @@ func (p *Player) SavePlayerData(nk runtime.NakamaModule) error {
 		},
 	}
 	//Write to the storage engine.
+	//@JWK TODO: On load need to grab the version hash and use that to validate when saving to prevent overwrites.
 	if _, err := nk.StorageWrite(context.Background(), wObj); err != nil {
 		return fmt.Errorf("failed to write player data to storage: %v", err)
 	}
