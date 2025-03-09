@@ -106,6 +106,9 @@ func LoadPlayerData(ctx context.Context, logger runtime.Logger, nk runtime.Nakam
 		}
 		//Set the display name from the users account data.
 		displayName := accounts[0].User.DisplayName
+		if displayName == "" {  //This is often empty as it requies a separate call to set.
+			displayName = accounts[0].User.Username
+		}
 		//Create new player object.
 		player := NewPlayer(userID, displayName)
 		return player, nil
