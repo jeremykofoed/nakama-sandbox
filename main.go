@@ -70,3 +70,14 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 
 	return nil
 }
+
+
+//@JWK TODO: Make and move to util.go file
+// Utility function to get the user id from the runtime.
+func UtilGetUserId(ctx context.Context) (string, error) {
+	userId, ok := ctx.Value(runtime.RUNTIME_CTX_USER_ID).(string)
+	if !ok {
+		return "", fmt.Errorf("Could not extract the user id from the runtime context.")
+	}
+	return userId, nil
+}

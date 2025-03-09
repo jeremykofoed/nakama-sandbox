@@ -67,7 +67,14 @@ func SavePlayerData(nk runtime.NakamaModule, player *Player) error {
 }
 
 // This function gets the player data from nakama storage.
-func LoadPlayerData(nk runtime.NakamaModule, userID string) (*Player, error) {
+func LoadPlayerData(ctx context.Context, logger runtime.Logger, nk runtime.NakamaModule) (*Player, error) {
+	//Get the user id from the runtime.
+	userID, err := UtilGetUserId(ctx)
+	if err != nil {
+		logger.Error("Unable to extract user id from context due to error: %v", err)
+		return nil, err
+	}
+
 	//Read from the storage engine.
 	rObj, err := nk.StorageRead(context.Background(), []*runtime.StorageRead{
 		{
@@ -79,9 +86,34 @@ func LoadPlayerData(nk runtime.NakamaModule, userID string) (*Player, error) {
 		return nil, err
 	}
 	if len(rObj) == 0 {
-		return nil, fmt.Errorf("player not found") //@JWK TODO: Call NewPlayer() and SavePlayerData().
+		//Get the users account data to get a display name.
+		accounts, err := nk.AccountsGetId(ctx, []string{userID})
+		if err != nil {
+			//More robust logging to get more info.
+			logger.WithFields(map[string]interface{}{
+				"userID": userID,
+			}).Error("Unable to lookup account due to error: %v.", err)
+			return nil, err
+		}
+		if len(accounts) != 1 {
+			//More robust logging to get more info.
+			logger.WithFields(map[string]interface{}{
+				"userID": userID,
+			}).Error("Found either no account or more than one.")
+			return nil, err
+		}
+		//Set the display name from the users account data.
+		displayName := accounts[0].User.DisplayName
+		//Create new player object.
+		player := NewPlayer(userID, displayName)
+		//Save to storage.
+		if err = SavePlayerData(nk, player); err != nil {
+			return nil, err
+		}
+		return player, nil
 	}
 	var player Player
+	//Unmarshal json data to player object.
 	if err = json.Unmarshal([]byte(rObj[0].Value), &player); err != nil {
 		return nil, err
 	}
