@@ -131,12 +131,6 @@ func InitAttackRegistry() {
 
 //
 func (p *Player) PlayerAttack(logger runtime.Logger, targetID string, attackRequest AttackType) error {
-	//@JWK TODO: RNG for success.
-	//@JWK TODO: Store battle data updates keeping track of health, status', etc.
-	//@JWK TODO: Check health of each player and return if anyone is dead.
-	//@JWK TODO: Add to battle stats when enemy is killed.
-	//@JWK TODO: Bonus, implement battle log.
-	
 	//Look for the target
 	targetEnemy := p.GetEnemy(targetID)
 	if targetEnemy.Type == "" {
@@ -210,6 +204,9 @@ func (p *Player) PlayerAttack(logger runtime.Logger, targetID string, attackRequ
 	}
 
 	//@JWK TODO: Once the player has done an attack, the enemy gets a turn to attack.
+
+	//@JWK TODO: Implement battle log.
+
 
 	return nil
 }

@@ -104,8 +104,8 @@ func AddStatusEffect(logger runtime.Logger, effectType StatusEffectType, ep Enti
 		logger.Error("Status effect type NOT found: %s", effectType)
 		return
 	}
-	duration := (effect.Duration * 10) //@JWK TODO: Remove multiplier.
-	effect.Duration = duration  //@JWK TODO: Remove me when multiplier is gone.
+	duration := (effect.Duration * 1) //Multiplier, was used for testing to increase the time of the effect.
+	effect.Duration = duration
 	effect.ExpiresAt = timestamp + duration
 	effect.UpdatedAt = timestamp
 	//Append and set.

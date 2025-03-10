@@ -15,11 +15,22 @@ type EntityProcessor interface {
 	SetHealth(int)
 }
 
+// Used for capturing battle events to log.
+type BattleEvent struct {
+	Actor string `json:"actor"`
+	Event string `json:"event"` //@JWK TODO: Conver this to a type instead of string.
+	Damage int `json:"damage"`
+	StatusEffect StatusEffectType `json:"status_effect"`
+	Timestamp int64 `json:"timestamp"`
+}
+
 // Battle data structure.
 type BattleState struct {
 	Enemies map[string]*Enemy `json:"enemies"` //Plan for more than one possible target.
 	//@JWK What else is needed???
 }
+
+const LogLimit = 2000 //@JWK TODO: This will need to be adjusted with some stress testing.
 
 //This function will attempt to get an on-going battle or create one.
 func (p *Player) LoadBattleState() error {
@@ -142,4 +153,24 @@ func CreateRewards() []RewardInfo {
 		rewards = append(rewards, reward)
 	}
 	return rewards
+}
+
+//
+func (p *Player) SetBattleEvent(event BattleEvent) {
+	//@JWK TODO: Do this!
+}
+
+//
+func LogBattleEvent() {
+	//Get Logs
+}
+
+//
+func SaveBattleLogs() {
+	//Get Logs
+}
+
+//
+func GetBattleLogs() {
+	//Get Logs
 }
