@@ -52,13 +52,12 @@ type CurrencyItem struct {
 
 // BattleState contains battle-related data
 type BattleState struct {
-	Enemies []Enemy `json:"enemies"`
+	Enemies map[string]Enemy `json:"enemies"`
 }
 
 // Enemy represents an enemy in the battle state
 type Enemy struct {
 	Type          string         `json:"type"`
-	ID            string         `json:"id"`
 	Health        int            `json:"health"`
 	AttackModifier float64        `json:"attack_modifier"`
 	StatusEffects []interface{}  `json:"status_effects"`
@@ -75,6 +74,7 @@ type RewardItem struct {
 //You can also look at the nakama api explorer api call AuthenticationDevice to get payload setup example.
 //http://localhost:7351/#/apiexplorer?endpoint=AuthenticateDevice
 func main () {
+	fmt.Println("\n")
 	//API info.
 	serverKey := "defaultkey"
 	host := "localhost"
@@ -83,29 +83,41 @@ func main () {
 	
 	//Get Session.
 	session := AuthAPI(urlBase, serverKey)
+	fmt.Println("-------------------------------------------------------------\n")
 
 	//RPC: Load game.
 	var targetID string = ""
-	player := LoadGameRPC(urlBase, session) //Get player data
-	fmt.Printf("Player: %+v\n", player.Data)
+	player := LoadGameRPC(urlBase, session)
+	fmt.Printf("LoadGameRPC -> Player: %+v\n\n", player.Data)
 	battleState := player.Data.BattleState //Get battle state.
 	if battleState.Enemies != nil { //Make sure Enemies property exists.
 		enemies := battleState.Enemies
+		fmt.Printf("LoadGameRPC -> Enemies: %+v\n", enemies)
 		if len(enemies) > 0 { //Make sure it isn't empty.
-			enemy := enemies[0]
-			fmt.Printf("enemy: %+v\n", enemy)
-			if enemy.ID != "" { //Make sure ID property exists.
-				targetID = enemy.ID
+			for id, e := range enemies {
+				if e.Type != "" { //Make sure ID property exists.
+					targetID = id
+					break
+				}
 			}
 		}
 	}
+	fmt.Println("-------------------------------------------------------------\n")
 
 	//If there is a targetID then do the RPC: Attack target.
 	if targetID != "" {
-		attackType := "jab"
-		player := AttackTargetRPC(urlBase, session, targetID, attackType) //Get player data
-		fmt.Printf("Attack Response: %+v\n", player)
+		attackType := "punch"
+		player := AttackTargetRPC(urlBase, session, targetID, attackType)
+		fmt.Printf("AttackTargetRPC -> Player: %+v\n", player)
+	} else {
+		fmt.Println("AttackTargetRPC -> Failed to do an attack, didn't find targetID.")
 	}
+	fmt.Println("-------------------------------------------------------------\n")
+
+	//RPC: Player info to get player health, status effects, number of enemy types killed.
+	response := PlayerInfoRPC(urlBase, session)
+	fmt.Printf("PlayerInfoRPC -> Response: %+v\n", response)
+	fmt.Println("-------------------------------------------------------------\n")
 }
 
 //Get the session information which is a JWT token/refresh token.
@@ -150,9 +162,9 @@ func AuthAPI(urlBase string, serverKey string) Session {
 		log.Fatalf("Response: %+v; Error: %v", res, err)
 	}
 	if res.StatusCode != http.StatusOK {
-		log.Fatalf("Non 200 code, response: %+v; Endpoint: %s", res, urlAPI)
+		log.Fatalf("Non 200 code: %d; Response: %+v; Endpoint: %s", res.StatusCode, string(resBody), urlAPI)
 	}
-	fmt.Printf("resBody: %s\n", resBody)
+	fmt.Printf("AuthAPI -> Response: %s\n", resBody)
 
 	var session Session
 	err = json.Unmarshal(resBody, &session)
@@ -193,7 +205,7 @@ func LoadGameRPC(urlBase string, session Session) PlayerData {
 		log.Fatalf("Response: %+v; Error: %v", res, err)
 	}
 	if res.StatusCode != http.StatusOK {
-		log.Fatalf("Non 200 code, response: %+v; Endpoint: %s", res, urlAPI)
+		log.Fatalf("Non 200 code: %d; Response: %+v; Endpoint: %s", res.StatusCode, string(resBody), urlAPI)
 	}
 	//fmt.Printf("resBody: %s\n", resBody)
 
@@ -252,7 +264,7 @@ func AttackTargetRPC(urlBase string, session Session, targetID string, attackTyp
 		log.Fatalf("Response: %+v; Error: %v", res, err)
 	}
 	if res.StatusCode != http.StatusOK {
-		log.Fatalf("Non 200 code, response: %+v; Endpoint: %s", res, urlAPI)
+		log.Fatalf("Non 200 code: %d;Response: %+v; Endpoint: %s", res.StatusCode, string(resBody), urlAPI)
 	}
 	//fmt.Printf("resBody: %s\n", resBody)
 
@@ -266,6 +278,56 @@ func AttackTargetRPC(urlBase string, session Session, targetID string, attackTyp
 	err = json.Unmarshal([]byte(resPayload.Data), &player)
 	if err != nil {
 		log.Fatalf("Response: %+v; Error: %v", resPayload, err)
+	}
+	//fmt.Printf("resBody: %+v\n", player)
+	
+	return player
+}
+
+//Makes a call to the RPC to load game.
+func PlayerInfoRPC(urlBase string, session Session) interface{} {
+	ctx := context.Background()
+
+	//API call info
+	endpoint := "/v2/rpc/player_info"
+	urlAPI := fmt.Sprintf("%s%s", urlBase, endpoint)
+
+	//Request setup.
+	req, err := http.NewRequestWithContext(ctx, "POST", urlAPI, nil)
+	if err != nil {
+		log.Fatalf("Endpoint: %+v; Error: %v", urlAPI, err)
+	}
+	req.Header.Set("Authorization", "Bearer " + session.Token) //JWT
+	req.Header.Set("Content-Type", "application/json")
+	
+	//Build client.
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+	defer res.Body.Close()
+
+	//Read response
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatalf("Response: %+v; Error: %v", res, err)
+	}
+	if res.StatusCode != http.StatusOK {
+		log.Fatalf("Non 200 code: %d; Response: %+v; Endpoint: %s", res.StatusCode, string(resBody), urlAPI)
+	}
+	//fmt.Printf("resBody: %s\n", resBody)
+
+	var payload Payload
+	err = json.Unmarshal(resBody, &payload)
+	if err != nil {
+		log.Fatalf("Response: %s; Error: %v", resBody, err)
+	}
+	
+	var player interface{}
+	err = json.Unmarshal([]byte(payload.Data), &player)
+	if err != nil {
+		log.Fatalf("Response: %+v; Error: %v", payload, err)
 	}
 	//fmt.Printf("resBody: %+v\n", player)
 	

@@ -21,10 +21,9 @@ const ( //Building it this way avoids using string values on maps but allows the
 // Enemy data structure.
 type Enemy struct {
 	Type EnemyType `json:"type"`
-	ID string `json:"id"` //Unique ID assigned at time of enemy selection.
 	Health int `json:"health"`
 	AttackModifier float64 `json:"attack_modifier"` //This is used to adjust attack type damage values.
-	StatusEffects []StatusEffect `json:"status_effects"` //Used to store player state modifiers.
+	StatusEffects []*StatusEffect `json:"status_effects"` //Used to store player state modifiers.
 	Rewards []RewardInfo `json:"rewards"` //Rewards assigned at time of enemy selection.
 }
 
@@ -55,26 +54,23 @@ func InitEnemyRegistry(ctx context.Context, logger runtime.Logger, nk runtime.Na
 		EnemyRegistry.Lock()  //Call lock on the mutex in preparation for writing.
 		EnemyRegistry.Enemies[Zombie] = Enemy{
 			Type: Zombie,
-			ID: "", //This gets set when it is paired with a player.
 			Health: 50,
 			AttackModifier: 1.5,
-			StatusEffects: []StatusEffect{},
+			StatusEffects: []*StatusEffect{},
 			Rewards: []RewardInfo{},
 		}
 		EnemyRegistry.Enemies[Mutant] = Enemy{
 			Type: Mutant,
-			ID: "", //This gets set when it is paired with a player.
 			Health: 75,
 			AttackModifier: 1.1,
-			StatusEffects: []StatusEffect{},
+			StatusEffects: []*StatusEffect{},
 			Rewards: []RewardInfo{},
 		}
 		EnemyRegistry.Enemies[Beast] = Enemy{
 			Type: Beast,
-			ID: "", //This gets set when it is paired with a player.
 			Health: 25,
 			AttackModifier: 2,
-			StatusEffects: []StatusEffect{},
+			StatusEffects: []*StatusEffect{},
 			Rewards: []RewardInfo{},
 		}
 		EnemyRegistry.Unlock() //Don't forget to release the mutex lock.
@@ -116,4 +112,14 @@ func SaveEnemyRegistry(nk runtime.NakamaModule) error {
 		return fmt.Errorf("failed to write enemy data to storage: %v", err)
 	}
 	return nil
+}
+
+// Interface function to get health.
+func (e *Enemy) GetHealth() int {
+	return e.Health
+}
+
+// Interface function to set health.
+func (e *Enemy) SetHealth(health int) {
+	e.Health = health
 }

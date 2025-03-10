@@ -19,9 +19,9 @@ type Player struct {
 	Experience int64 `json:"experience"`
 	Health int `json:"health"`
 	Currencies []Currency `json:"currency"` //Nakama supports a wallet that can be implemented at a later time.
-	StatusEffects []StatusEffect `json:"status_effects"` //Used to store player state modifiers.
+	StatusEffects []*StatusEffect `json:"status_effects"` //Used to store player state modifiers.
 	BattleState BattleState `json:"battle_state"` //Used to store the battle game state.
-	BattleStats map[EnemyType]int `json:"battle_stats"` //Used to store the number of enemies vanquished.  Expound upon this to include other stats.
+	BattleStats map[EnemyType]int `json:"battle_stats"` //Used to store the number of enemies vanquished.  @JWK TODO: Expound upon this to include other stats.
 	Attributes map[string]interface{} `json:"attributes"` //Key-Value map for addional data as needed.
 	CreatedAt int64 `json:"created_at"`
 	UpdatedAt int64 `json:"updated_at"`
@@ -39,7 +39,7 @@ func NewPlayer(userID, displayerName string) *Player {
 			{Type: Gold, Amount: 0, },
 			{Type: Gems, Amount: 0, },
 		},
-		StatusEffects: []StatusEffect{},
+		StatusEffects: []*StatusEffect{},
 		BattleState: BattleState{},
 		BattleStats: make(map[EnemyType]int),
 		Attributes: make(map[string]interface{}),
@@ -121,4 +121,14 @@ func LoadPlayerData(ctx context.Context, logger runtime.Logger, nk runtime.Nakam
 		return nil, err
 	}
 	return &player, nil
+}
+
+// Interface function to get health.
+func (p *Player) GetHealth() int {
+	return p.Health
+}
+
+// Interface function to set health.
+func (p *Player) SetHealth(health int) {
+	p.Health = health
 }

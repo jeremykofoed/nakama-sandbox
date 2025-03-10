@@ -67,8 +67,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		return err
 	}
 
-	//@JWK TODO: Implement RPC to do attacks {player id, target id, attack info}.
-	//@JWK TODO: Successful hits must return updated health values.
+	//RPC to do attacks, successful hits return updated values.
 	if err := initializer.RegisterRpc("attack_target", AttackTargetRPC()); err != nil {
 		return err
 	}

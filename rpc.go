@@ -25,7 +25,7 @@ func LoadGameRPC() func(ctx context.Context, logger runtime.Logger, db *sql.DB, 
 		}
 
 		//Get on-going battle state OR start a battle.
-		err = player.LoadBattleState(ctx, logger, nk)
+		err = player.LoadBattleState()
 		if err != nil {
 			logger.Error("Unable to get battle state: %v", err)
 			return "", err
@@ -79,8 +79,7 @@ func AttackTargetRPC()func(ctx context.Context, logger runtime.Logger, db *sql.D
 		if err := json.Unmarshal([]byte(payload), &attackRequest); err != nil {
 			return "", runtime.NewError("unable to unmarshal payload", 13)
 		}
-
-		//Validate client input.
+		logger.Debug("attackRequest: %+v", attackRequest)
 
 		//Get Player object.
 		player, err := LoadPlayerData(ctx, logger, nk, userID)
@@ -90,6 +89,10 @@ func AttackTargetRPC()func(ctx context.Context, logger runtime.Logger, db *sql.D
 		}
 
 		//Perform the attack.
+		err = player.PlayerAttack(logger, attackRequest.TargetID, attackRequest.Attack)
+		if err != nil {
+			return "", err
+		}
 
 		//Save any changes to player object.
 		err = player.SavePlayerData(nk)
@@ -138,7 +141,7 @@ func PlayerInfoRPC() func(ctx context.Context, logger runtime.Logger, db *sql.DB
 		//Limited scope response struct
 		response := struct {
 			PlayerHealth int `json:"player_health"`
-			StatusEffects []StatusEffect `json:"status_effects"`
+			StatusEffects []*StatusEffect `json:"status_effects"`
 			BattleStats map[EnemyType]int `json:"battle_stats"`
 		}{
 			PlayerHealth: player.Health,

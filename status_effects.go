@@ -3,6 +3,9 @@ package main
 import (
 	"time"
 	"sync"
+	"math"
+
+	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 // Effects that can be applied.
@@ -29,6 +32,7 @@ type StatusEffect struct {
 	Interval int64 `json:"interval"` //How many seconds of the duraction until the modifier is applied.
 	Stack StackInfo `json:"stack"` //Modifier multiplier.
 	ExpiresAt int64 `json:"expires_at"` //Timestamp of when the effect will fall off.
+	UpdatedAt int64 `json:"updated_at"` //Timestamp of when the effects were last processed.
 }
 
 // Registry to hold all of the definitions.  Using a mutex here since the data could be live-ops driven meaning it could change after nakama init.
@@ -52,6 +56,7 @@ func InitStatusEffectsRegistry() {
 		Interval: 0, //Seconds
 		Stack: StackInfo{},
 		ExpiresAt: 0, //This gets set when it is applied.
+		UpdatedAt: 0, //This gets set when it is applied.
 	}
 	StatusEffectsRegistry.StatusEffects[Blind] = StatusEffect{
 		Type: Blind,
@@ -60,58 +65,128 @@ func InitStatusEffectsRegistry() {
 		Interval: 0, //Seconds
 		Stack: StackInfo{},
 		ExpiresAt: 0, //This gets set when it is applied.
+		UpdatedAt: 0, //This gets set when it is applied.
 	}
 	StatusEffectsRegistry.StatusEffects[Poison] = StatusEffect{
 		Type: Poison,
 		Modifier: -5, //Modifier that will be used in the game logic.
 		Duration: 30, //Seconds
-		Interval: 0, //Seconds
+		Interval: 3, //Seconds
 		Stack: StackInfo{},
 		ExpiresAt: 0, //This gets set when it is applied.
+		UpdatedAt: 0, //This gets set when it is applied.
 	}
 	StatusEffectsRegistry.StatusEffects[Bleed] = StatusEffect{
 		Type: Bleed,
 		Modifier: -2, //Modifier that will be used in the game logic.
 		Duration: 60, //Seconds
-		Interval: 0, //Seconds
+		Interval: 5, //Seconds
 		Stack: StackInfo{
 			Count: 0, //This gets set if it is applied.
 			Max: 3, //Maximum possible stacks.
 			Chance: 0.6, //Chance to apply.
 		},
 		ExpiresAt: 0, //This gets set when it is applied.
+		UpdatedAt: 0, //This gets set when it is applied.
 	}
 }
 
-// This function adds a status effect to a target.  
-func (p *Player) AddStatusEffect(effect StatusEffectType, modifier float64, duration int64) {
+// This function add status effects.  
+func AddStatusEffect(logger runtime.Logger, effectType StatusEffectType, ep EntityProcessor) {
+	//@JWK TODO: Handle stacking effects.
+	//@JWK TODO: If it's already an existing effect but doesn't stack, refresh duration and ExpiresAt..
 	timestamp := time.Now().Unix()
-	//Append the status effect to the players effects.
-	p.StatusEffects = append(p.StatusEffects, StatusEffect{
-		Type: effect,
-		Modifier: modifier,
-		Duration: duration,
-		ExpiresAt: timestamp + (duration * 1000), //Convert to milliseconds.
-	})
-	p.UpdatedAt = timestamp
+	logger.Debug("Adding status effect at: %v", timestamp)
+	StatusEffectsRegistry.RLock() //Read lock
+	defer StatusEffectsRegistry.RUnlock() //Release lock
+	effect := StatusEffectsRegistry.StatusEffects[effectType]
+	if effect.Type == "" {
+		logger.Error("Status effect type NOT found: %s", effectType)
+		return
+	}
+	duration := (effect.Duration * 10) //@JWK TODO: Remove multiplier.
+	effect.Duration = duration  //@JWK TODO: Remove me when multiplier is gone.
+	effect.ExpiresAt = timestamp + duration
+	effect.UpdatedAt = timestamp
+	//Append and set.
+	logger.Debug("Added status effect: %+v", effect)
+	statusEffects := ep.GetStatusEffects()
+	statusEffects = append(statusEffects, &effect)
+	ep.SetStatusEffects(statusEffects)
 }
 
-// This function processes status effects, removes expired status effects, decrements duration to help the client anticipate fall off.
-func (p *Player) TickStatusEffect() {
+// This function removes expired status effects and decrements duration to help the client anticipate fall off.
+func TickStatusEffect(logger runtime.Logger, ep EntityProcessor) {
 	timestamp := time.Now().Unix()
 	//Check if there are any effects to process.
-	if len(p.StatusEffects) > 0 {
-		var processedEffects []StatusEffect
+	statusEffects := ep.GetStatusEffects()
+	if len(statusEffects) > 0 {
+		logger.Debug("Tick status effects for source")
+		var processedEffects []*StatusEffect
 		//Loop over the status effects to process them.
-		for _, effect := range p.StatusEffects {
-			//If there effect hasn't expired then process it, otherwise it falls off.
-			if effect.ExpiresAt > timestamp {
+		for _, effect := range statusEffects {
+			//Process effects that deal damage over time.
+			if effect.Type == Bleed || effect.Type == Poison {
+				logger.Debug("Tick status effects, processing: %+v", effect)
+				//@JWK TODO: Check for stacks.
+				health := ep.GetHealth()
+				//Get delta .
+				delta := (timestamp - effect.UpdatedAt) //@JWK TODO: Find the delta between the update_at and timestamp and compare that value to the duration for gauging if effect should be "refreshed".
+				logger.Debug("Tick delta(%d) = update(%d) / timestamp(%d)", delta, effect.UpdatedAt, timestamp)
+				if delta >= 0 { //Positive means future date.
+					//Calculate the intervals of period damage.
+					if effect.Interval == 0 {
+						logger.Error("Effect interval 0, can't divide by 0: %+v", effect)
+						continue
+					}
+					intervals := delta / effect.Interval //Go rounds down so don't have to floor.
+					logger.Debug("Tick intervals(%d) = delta(%d) / interval(%d)", intervals, delta, effect.Interval)
+					//Caclulate the total damage.
+					damage := intervals * int64(effect.Modifier)
+					logger.Debug("Tick damage(%d) = intervals(%d) * modifier(%f)", damage, intervals, effect.Modifier)
+					//Calculate max damage.
+					mDamage := (effect.Duration / effect.Interval) * int64(effect.Modifier)
+					logger.Debug("Tick mDamage(%d) = (duration(%d) / interval(%d)) * modifier(%f)", mDamage, effect.Duration, effect.Interval, effect.Modifier)
+					if math.Abs(float64(damage)) > math.Abs(float64(mDamage)) {
+						damage = mDamage //Max damage that would be applied.
+					}
+					//Impact health, negeative numbers will decrement.
+					health += int(damage)
+					logger.Debug("Tick health H:%d - D:%d", health, damage)
+					ep.SetHealth(health)
+				}
+			}
+			//If the effect hasn't expired then updated it, otherwise it falls off.
+			delta := (effect.ExpiresAt - timestamp)
+			if delta > 0 { //Positive means future date.
+				logger.Debug("Tick status effects, processing: %+v", effect)
 				//Update duraction with time delta.
-				effect.Duration = (effect.ExpiresAt - timestamp) / 1000 //Keep in milliseconds.
-				processedEffects = append(processedEffects, effect)
+				effect.Duration = delta
+				effect.UpdatedAt = timestamp
+				processedEffects = append(processedEffects, effect) //Keep the ones not expired.
 			}
 		}
-		p.StatusEffects = processedEffects
-		p.UpdatedAt = timestamp
+		ep.SetStatusEffects(processedEffects)
 	}
 }
+
+// Interface function to get status effects.
+func (p *Player) GetStatusEffects() []*StatusEffect {
+	return p.StatusEffects
+}
+
+// Interface function to set status effects.
+func (p *Player) SetStatusEffects(statusEffects []*StatusEffect) {
+	p.StatusEffects = statusEffects
+}
+
+// Interface function to get status effects.
+func (e *Enemy) GetStatusEffects() []*StatusEffect {
+	return e.StatusEffects
+}
+
+// Interface function to set status effects.
+func (e *Enemy) SetStatusEffects(statusEffects []*StatusEffect) {
+	e.StatusEffects = statusEffects
+}
+
